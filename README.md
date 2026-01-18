@@ -34,7 +34,7 @@ Installation et Configuration
 	Windows : venv\Scripts\activate
 
 	macOS/Linux : source venv/bin/activate
-4. Installer les dépendances :
+4.Installer les dépendances :
 	pip install -r requirements.txt
-5. Lancer l'application :
+5.Lancer l'application :
 	streamlit run app.py
