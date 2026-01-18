@@ -11,7 +11,38 @@ st.set_page_config(page_title="MNIST Classifier - Master IGOV", layout="wide")
 
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 4px; height: 3em; background-color: #0047AB; color: white; }
+    .stButton>button { widimport numpy as np
+from PIL import Image, ImageOps
+
+def preprocess_image(image_data):
+    # Convertir en niveaux de gris
+    img = image_data.convert('L')
+    
+    # Inverser si nécessaire (on veut blanc sur noir)
+    # Si le dessin est noir sur blanc, on inverse
+    if np.mean(img) > 127:
+        img = ImageOps.invert(img)
+    
+    # Trouver la zone contenant le chiffre (Bounding Box)
+    bbox = img.getbbox()
+    if bbox:
+        img = img.crop(bbox)
+    
+    # Redimensionner à 20x20 en gardant le ratio (standard MNIST)
+    w, h = img.size
+    ratio = 20.0 / max(w, h)
+    new_size = (int(w * ratio), int(h * ratio))
+    img = img.resize(new_size, Image.Resampling.LANCZOS)
+    
+    # Créer une image noire 28x28 et coller le 20x20 au centre
+    final_img = Image.new('L', (28, 28), 0)
+    upper = (28 - new_size[1]) // 2
+    left = (28 - new_size[0]) // 2
+    final_img.paste(img, (left, upper))
+    
+    # Normalisation et mise à plat pour le MLP
+    data = np.array(final_img).reshape(1, 784) / 255.0
+    return data, final_imgth: 100%; border-radius: 4px; height: 3em; background-color: #0047AB; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -22,10 +53,10 @@ st.markdown("---")
 @st.cache_resource
 def load_trained_model():
     try:
-        # Chargement dyal l-weights
+
         data = np.load('model_weights.npz')
         
-        # Détection automatique dyal architecture
+        
         h_size, i_size = data['W1'].shape
         o_size = data['W2'].shape[0]
         
@@ -58,21 +89,32 @@ if canvas_result.image_data is not None and model is not None:
     with col2:
         st.subheader("Résultat de l'IA")
         if st.button('Lancer la classification'):
-            # Calcul via model.py
-            output = model.forward_propagation(processed_data)
+            
+            x_input = processed_data.flatten()
+            
+
+            x_input = x_input[:model.input_size]
+            
+            # 3. Calcul via model.py
+            output = model.forward_propagation(x_input)
+            # ------------------------
+            
             probs = output.flatten()
             prediction = np.argmax(probs)
             
-            # Affichage
+            # Affichage Metrics
             c1, c2 = st.columns(2)
             c1.metric("Chiffre Prédit", prediction)
             c2.metric("Confiance", f"{np.max(probs)*100:.2f}%")
             
+            # Histogramme
             fig, ax = plt.subplots(figsize=(6, 3))
             ax.bar(range(10), probs, color=['#0047AB' if i==prediction else '#E0E0E0' for i in range(10)])
             ax.set_xticks(range(10))
+            ax.set_ylabel("Probabilité")
             st.pyplot(fig)
             
             with st.expander("Diagnostic Technique"):
-                st.write(f"Dimension détectée : {model.input_size} neurones")
+                st.write(f"Dimension du modèle : {model.input_size} neurones")
+                st.write(f"Dimension de l'entrée : {x_input.shape[0]} pixels")
                 st.image(debug_img, width=150)
