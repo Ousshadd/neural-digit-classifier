@@ -2,99 +2,77 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import matplotlib.pyplot as plt
 import numpy as np
-import joblib
-from preprocess import preprocess_image
 from PIL import Image
+from preprocess import preprocess_image
+from model import MLP 
 
-# Configuration de la page
-st.set_page_config(page_title="Classification MNIST", layout="wide")
+# Config dyal l-page
+st.set_page_config(page_title="MNIST Classifier - Master IGOV", layout="wide")
 
-# Style CSS pour affiner l'esthétique
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 4px; height: 3em; }
-    .reportview-container { background: #fafafa; }
+    .stButton>button { width: 100%; border-radius: 4px; height: 3em; background-color: #0047AB; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("Système de Reconnaissance de Chiffres Manuscrits")
+st.write("Analyse Matricielle par Perceptron Multi-Couches")
 st.markdown("---")
 
-# Charger le modèle (MLP)
 @st.cache_resource
-def load_my_model():
-    return joblib.load('model_mnist.joblib')
+def load_trained_model():
+    try:
+        # Chargement dyal l-weights
+        data = np.load('model_weights.npz')
+        
+        # Détection automatique dyal architecture
+        h_size, i_size = data['W1'].shape
+        o_size = data['W2'].shape[0]
+        
+        # Initialisation
+        nn = MLP(input_size=i_size, hidden_size=h_size, output_size=o_size)
+        nn.W1, nn.b1 = data['W1'], data['b1']
+        nn.W2, nn.b2 = data['W2'], data['b2']
+        return nn
+    except Exception as e:
+        st.error(f"Erreur technique de chargement : {e}")
+        return None
 
-model = load_my_model()
+model = load_trained_model()
 
-# Division de l'interface
 col1, col2 = st.columns([1, 1.2])
 
 with col1:
-    st.subheader("Zone de Saisie")
-    st.write("Veuillez dessiner un chiffre ci-dessous :")
+    st.subheader("Saisie Manuscrite")
     canvas_result = st_canvas(
-        stroke_width=18,
-        stroke_color="#FFFFFF",
-        background_color="#000000",
-        height=300,
-        width=300,
-        drawing_mode="freedraw",
-        key="canvas",
+        stroke_width=20, stroke_color="#FFFFFF", background_color="#000000",
+        height=300, width=300, drawing_mode="freedraw", key="canvas",
     )
-    
     if st.button("Réinitialiser"):
         st.rerun()
 
-if canvas_result.image_data is not None:
+if canvas_result.image_data is not None and model is not None:
     raw_img = Image.fromarray(canvas_result.image_data.astype('uint8'))
-    
-    # Prétraitement
     processed_data, debug_img = preprocess_image(raw_img)
     
     with col2:
-        st.subheader("Analyse Prédictive")
-        
-        if st.button('Exécuter la classification'):
-            # Prédiction
-            probs = model.predict_proba(processed_data)[0]
+        st.subheader("Résultat de l'IA")
+        if st.button('Lancer la classification'):
+            # Calcul via model.py
+            output = model.forward_propagation(processed_data)
+            probs = output.flatten()
             prediction = np.argmax(probs)
-            confiance = np.max(probs)
             
-            # Affichage des indicateurs clés
+            # Affichage
             c1, c2 = st.columns(2)
             c1.metric("Chiffre Prédit", prediction)
-            c2.metric("Indice de Confiance", f"{confiance*100:.2f}%")
+            c2.metric("Confiance", f"{np.max(probs)*100:.2f}%")
             
-            st.write("Distribution des probabilités :")
-            st.progress(float(confiance))
-            
-            # Graphique Matplotlib
-            fig, ax = plt.subplots(figsize=(6, 3.5))
-            digits = list(range(10))
-            # Utilisation d'une palette de couleurs sobre
-            colors = ['#E0E0E0' if x != prediction else '#0047AB' for x in digits]
-            
-            ax.bar(digits, probs, color=colors)
-            ax.set_xticks(digits)
-            ax.set_ylim(0, 1.1)
-            ax.set_ylabel("Probabilité")
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            
+            fig, ax = plt.subplots(figsize=(6, 3))
+            ax.bar(range(10), probs, color=['#0047AB' if i==prediction else '#E0E0E0' for i in range(10)])
+            ax.set_xticks(range(10))
             st.pyplot(fig)
             
-            # Section de diagnostic technique
-            with st.expander("Diagnostic : Vision du modèle"):
-                st.write("Image normalisée (28x28 pixels) :")
-                st.image(debug_img, width=120)
-
-# Barre latérale informative (Audit et Gouvernance)
-st.sidebar.header("Informations Système")
-st.sidebar.markdown("""
-**Architecture du modèle** Multi-Layer Perceptron (MLP)
-
-**Dataset d'entraînement** MNIST Original (70,000 images)
-
-**Format de sérialisation** Scikit-learn Joblib / NPZ Weights
-""")
+            with st.expander("Diagnostic Technique"):
+                st.write(f"Dimension détectée : {model.input_size} neurones")
+                st.image(debug_img, width=150)
