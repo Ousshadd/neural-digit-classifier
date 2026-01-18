@@ -23,7 +23,7 @@ class MLP:
         Z1 = np.dot(self.W1, X_input) + self.b1
         A1 = self.relu(Z1)
         
-        # Calcul dyal l-couche de sortie
+    
         Z2 = np.dot(self.W2, A1) + self.b2
         A2 = self.softmax(Z2)
         
