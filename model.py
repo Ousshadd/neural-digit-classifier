@@ -18,15 +18,12 @@ class MLP:
         return exp_z / exp_z.sum(axis=0)
 
     def forward_propagation(self, X):
-        # Auto-reshape bach n-tfadaw l-erreur dyal dimensions
-        # X_input ghadi i-koun fih l-3adad dyal pixels li m-traini 3lihom W1
+        # Khass dima 4 spaces f l-bidaya dyal had l-lines
         X_input = X[:self.input_size].reshape(-1, 1)
         
-        # Couche cachée
         Z1 = np.dot(self.W1, X_input) + self.b1
         A1 = self.relu(Z1)
         
-        # Couche de sortie
         Z2 = np.dot(self.W2, A1) + self.b2
         A2 = self.softmax(Z2)
         
