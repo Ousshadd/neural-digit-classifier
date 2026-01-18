@@ -1,0 +1,22 @@
+# Environnement Virtuel
+venv/
+env/
+.env
+
+# Fichiers temporaires Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Dossiers d'éditeurs (VS Code / PyCharm)
+.vscode/
+.idea/
+
+# Données et modèles lourds ou redondants
+data/
+*.joblib
+.DS_Store
+
+# Logs
+*.log
